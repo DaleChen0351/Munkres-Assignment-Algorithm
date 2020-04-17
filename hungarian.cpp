@@ -2,39 +2,137 @@
 using namespace std;
 
 
+//temp
+int path_row_0;
+int path_col_0;
+#define path_len (16)
+int path[path_len][2];
+int path_count;
 
 
-void step_one(int& step)
+
+HungarianMatch::HungarianMatch(const int rows, const int columns)
+{
+    m_rows = rows;
+    m_cols = columns;
+    m_matrix = nullptr;
+    rowCover = nullptr;
+    colCover = nullptr;
+    resize(rows,columns,(ElemType)0);
+
+}
+
+HungarianMatch::~HungarianMatch()
+{
+    if(m_matrix != nullptr)
+    {
+        for(int row = 0; row < m_rows; row++)
+        {
+            delete[]m_matrix[row];
+        }
+
+        delete[]m_matrix;
+    }
+
+    m_matrix = nullptr;
+
+    if(colCover != nullptr)
+    {
+        delete[]colCover;
+    }
+    if(rowCover != nullptr)
+    {
+        delete[]rowCover;
+    }
+
+    rowCover = nullptr;
+    colCover = nullptr;
+}
+
+void HungarianMatch::resize(const int rows, const int columns, const ElemType default_value)
+{
+    if(rows <= 0 || columns <= 0)
+    {
+        return;
+    }
+    //alloc new space 
+    m_matrix = new ElemType*[rows];
+    m_mask = new int*[rows];
+
+    for(int row = 0; row < rows; row++)
+    {
+        m_matrix[row] = new ElemType[columns];
+        m_mask[row] = new int[columns];
+    }
+
+    // alloc 
+    rowCover = new bool[rows];
+    colCover = new bool[columns];
+
+    for(int row = 0; row < m_rows; row++)
+    {
+        for(int col = 0; col < m_cols; col++)
+        {
+            m_matrix[row][col] = default_value;
+            m_mask[row][col] = 0;
+        }
+        rowCover[row] = false;
+    }
+
+    for(int col = 0; col < m_cols; col++)
+    {
+        colCover[col] = false;
+    }
+}
+
+void HungarianMatch::Process(ElemType inMatrix[][numCols] , bool outMatch[][numCols])
+{
+
+    for(int row = 0; row < m_rows; row++)
+    {
+        for(int col = 0; col < m_cols; col++)
+        {
+            m_matrix[row][col] = inMatrix[row][col];
+        }
+    }
+    
+    run();
+
+    
+}
+
+
+void HungarianMatch::step_one()
 {
     int min_in_row;
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        min_in_row = cost[row][0];
-        for(int col = 0; col < nCols; col++)
+        min_in_row = m_matrix[row][0];
+        for(int col = 0; col < m_cols; col++)
         {
-            if(cost[row][col] < min_in_row)
+            if(m_matrix[row][col] < min_in_row)
             {
-                min_in_row = cost[row][col];
+                min_in_row = m_matrix[row][col];
             }
         }
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            cost[row][col]-=min_in_row;
+            m_matrix[row][col]-= min_in_row;
         }
     }
 
-    step = 2;
+    m_step = 2;
 }
 
-void step_two(int& step)
+void HungarianMatch::step_two()
 {
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            if(cost[row][col] == 0 && rowCover[row] == false && colCover[col] == false)
+            if(m_matrix[row][col] == 0 && rowCover[row] == false && colCover[col] == false)
             {
-               mask[row][col] = 1;// only set a star entry for each row && col
+               m_mask[row][col] = 1;// only set a star entry for each row && col
                rowCover[row] = true;
                colCover[col] = true;
             }
@@ -42,32 +140,32 @@ void step_two(int& step)
         }
     }
     //clear
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
         rowCover[row] = false;
     }
-    for(int col = 0; col < nCols; col++)
+    for(int col = 0; col < m_cols; col++)
     {
         colCover[col] = false;
     }
-    step = 3;
+    m_step = 3;
 }
 
-void step_three(int& step)
+void HungarianMatch::step_three()
 {
     int col_count;
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            if(mask[row][col] == 1)
+            if(m_mask[row][col] == 1)
             {
                 colCover[col] = true;
             }
         }   
     }
     col_count = 0;
-    for(int col = 0; col < nCols; col++)
+    for(int col = 0; col < m_cols; col++)
     {
         if(colCover[col])
         {
@@ -75,21 +173,21 @@ void step_three(int& step)
         }
     }
 
-    if(col_count >= nCols || col_count >= nRows)
+    if(col_count >= m_cols || col_count >= m_rows)
     {
-        step = 7;
+        m_step = 7;
     }
     else
     {
-        step = 4;
+        m_step = 4;
     }
     
 }
 // 在整张表中寻找一个未被竖线覆盖的零点，如果找到一个，则立即返回该点的横纵坐标
-void find_a_zero(int& row, int& col)
+void HungarianMatch::find_a_zero(int& row, int& col)
 {
     int r = 0;
-    int c;//?
+    int c;
     bool done;
 
     row = -1;
@@ -103,34 +201,33 @@ void find_a_zero(int& row, int& col)
         while (true)
         {
             //find a non-covered zero
-            if(cost[r][c] == 0 && rowCover[r] == false && colCover[c] == false)
+            if(m_matrix[r][c] == 0 && rowCover[r] == false && colCover[c] == false)
             {
                 row = r;
                 col = c;
                 done = true;
             }
             c+=1;
-            if(c >= nCols || done)
+            if(c >= m_cols || done)
             {
                 break;
             }
         }
         r+=1;
-        if(r >= nRows)
+        if(r >= m_rows)
         {
             done = true;
-        }
-        
+        }     
     }
     
 }
 //确定某一行是否有标记了星号的节点
-bool star_in_row(int row)
+bool HungarianMatch::star_in_row(int row)
 {
     bool retVal = false;
-    for(int col = 0; col < nCols; col++)
+    for(int col = 0; col < m_cols; col++)
     {
-        if(mask[row][col] == 1)
+        if(m_mask[row][col] == 1)
         {
             retVal = true;
         }
@@ -138,12 +235,12 @@ bool star_in_row(int row)
     return retVal;
 }
 
-void find_star_in_row(int row, int& col)
+void HungarianMatch::find_star_in_row(int row, int& col)
 {
     col = -1;
-    for(int c = 0; c < nCols; c++)
+    for(int c = 0; c < m_cols; c++)
     {
-        if(mask[row][c] == 1)
+        if(m_mask[row][c] == 1)
         {
             col = c;
         }
@@ -152,7 +249,7 @@ void find_star_in_row(int row, int& col)
 
 
 
-void step_four(int& step)
+void HungarianMatch::step_four()
 {
     int row = -1;
     int col = -1;
@@ -165,11 +262,11 @@ void step_four(int& step)
         if(row == -1)
         {
             done = true;
-            step = 6;
+            m_step = 6;
         }
         else
         {
-            mask[row][col] = 2;//prim :non-covered zero
+            m_mask[row][col] = 2;//prim :non-covered zero
             //如果找到的零点所在的行已经有了一个零点了
             if(star_in_row(row))
             {
@@ -181,7 +278,7 @@ void step_four(int& step)
             else
             {
                 done = true;
-                step = 5;
+                m_step = 5;
                 //(1,0)
                 path_row_0 = row;
                 path_col_0 = col;
@@ -194,12 +291,12 @@ void step_four(int& step)
     
 }
 
-void find_star_in_col(int col, int& row)
+void HungarianMatch::find_star_in_col(int col, int& row)
 {
     row = -1;
-    for(int r = 0; r < nRows; r++)
+    for(int r = 0; r < m_rows; r++)
     {
-        if(mask[r][col] == 1)
+        if(m_mask[r][col] == 1)
         {
             row = r;
         }
@@ -207,34 +304,34 @@ void find_star_in_col(int col, int& row)
 
 }
 
-void find_prime_in_row(int row, int& col)
+void HungarianMatch::find_prime_in_row(int row, int& col)
 {
-    for(int c = 0; c < nCols; c++)
+    for(int c = 0; c < m_cols; c++)
     {
-        if(mask[row][c] == 2)
+        if(m_mask[row][c] == 2)
         {
             col = c;
         }
     }
 }
 
-void augment_path()
+void HungarianMatch::augment_path()
 {
     for(int p = 0; p < path_count; p++)
     {
         int p_x = path[p][0];
         int p_y = path[p][1];
-        if(mask[p_x][p_y] == 1)
+        if(m_mask[p_x][p_y] == 1)
         {
-            mask[p_x][p_y] = 0;
+            m_mask[p_x][p_y] = 0;
         }
         else
         {
-            mask[p_x][p_y] = 1;
+            m_mask[p_x][p_y] = 1;
         }   
     }
 }
-void clear_path()
+void HungarianMatch::clear_path()
 {
     for(int p = 0; p < path_len; p++)
     {
@@ -245,35 +342,35 @@ void clear_path()
     path_col_0 = -1;
 }
 
-void clear_covers()
+void HungarianMatch::clear_covers()
 {
     //clear
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
         rowCover[row] = false;
     }
-    for(int col = 0; col < nCols; col++)
+    for(int col = 0; col < m_cols; col++)
     {
         colCover[col] = false;
     }
 }
 
-void erase_primes()
+void HungarianMatch::erase_primes()
 {
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            if(mask[row][col] ==2)
+            if(m_mask[row][col] ==2)
             {
-                mask[row][col] = 0;
+                m_mask[row][col] = 0;
             }
         }
     }
 }
 
 
-void step_five(int& step)
+void HungarianMatch::step_five()
 {
     bool done = false;
     int r = -1;
@@ -312,101 +409,101 @@ void step_five(int& step)
     erase_primes();//primes均去除
     //?
     clear_path();
-    step = 3;
+    m_step = 3;
 
 }
 
-void find_smallest(int& minVal)
+void HungarianMatch::find_smallest(int& minVal)
 {
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
             if(rowCover[row] == false && colCover[col] == false)
             {
-                if(minVal > cost[row][col])
+                if(minVal > m_matrix[row][col])
                 {
-                    minVal = cost[row][col];
+                    minVal = m_matrix[row][col];
                 }
             }
             
         }
     }
 }
-void step_six(int& step)
+void HungarianMatch::step_six()
 {
     int minVal = MAX_VAL;
     find_smallest(minVal);
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
             if(rowCover[row] == true)
             {
-                cost[row][col] +=minVal;
+                m_matrix[row][col] +=minVal;
             }
             if(colCover[col] == false)
             {
-                cost[row][col] -= minVal;
+                m_matrix[row][col] -= minVal;
             }
         }
     }
 
-    step = 4;
+    m_step = 4;
 }
 
-void showCostMatrix()
+void HungarianMatch::showCostMatrix()
 {
     cout<<"Cost Matrix:"<<endl;
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            cout<<cost[row][col]<<" ";
+            cout<<m_matrix[row][col]<<" ";
         }
         cout<<endl;
     }
     cout<<endl;
 }
 
-void showMaskMatrix()
+void HungarianMatch::showMaskMatrix()
 {
     cout<<"Mask Matrix:"<<endl;
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            cout<<mask[row][col]<<" ";
+            cout<<m_mask[row][col]<<" ";
         }
         cout<<endl;
     }
     cout<<endl;
 }
-void clear_mask()
+void HungarianMatch::clear_mask()
 {
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
-        for(int col = 0; col < nCols; col++)
+        for(int col = 0; col < m_cols; col++)
         {
-            mask[row][col] = 0;
+            m_mask[row][col] = 0;
         }
     }
 }
 
-void show_colCover()
+void HungarianMatch::show_colCover()
 {
     cout<<"colCover:"<<endl;
-    for(int col = 0; col < nCols; col++)
+    for(int col = 0; col < m_cols; col++)
     {
         cout<<colCover[col]<<" ";
     }
     cout<<endl;
     cout<<endl;
 }
-void show_rowCover()
+void HungarianMatch::show_rowCover()
 {
     cout<<"rowCover:"<<endl;
-    for(int row = 0; row < nRows; row++)
+    for(int row = 0; row < m_rows; row++)
     {
         cout<<rowCover[row]<<" ";
     }
@@ -414,7 +511,7 @@ void show_rowCover()
     cout<<endl;
 }
 
-void step_seven()
+void HungarianMatch::step_seven()
 {
     showMaskMatrix();
     showCostMatrix();
@@ -422,10 +519,10 @@ void step_seven()
 
 
 
-void Run()
+void HungarianMatch::run()
 {
     bool done = false;
-    int step = 1;
+    m_step = 1;
     while(!done)
     {
         showCostMatrix();
@@ -434,31 +531,31 @@ void Run()
         show_colCover();
         
         //show
-        switch(step)
+        switch(m_step)
         {
             case 1:
                 cout<<"***step 1***"<<endl;
-                step_one(step);
+                step_one();
                 break;
             case 2:
                 cout<<"***step 2***"<<endl;
-                step_two(step);
+                step_two();
                 break;
             case 3:
                 cout<<"***step 3***"<<endl;
-                step_three(step);
+                step_three();
                 break;
             case 4:
                 cout<<"***step 4***"<<endl;
-                step_four(step);
+                step_four();
                 break;
             case 5:
                 cout<<"***step 5***"<<endl;
-                step_five(step);
+                step_five();
                 break;
             case 6:
                 cout<<"***step 6***"<<endl;
-                step_six(step);
+                step_six();
                 break;
             case 7:
                 cout<<"***step 7***"<<endl;
@@ -473,29 +570,7 @@ void Run()
 
 
 
-int main()
-{
-    clear_covers();
-    clear_mask();
 
-    int test[nRows][nCols] = {
-        {1,2,3},
-        {2,4,6},
-        {3,6,9} // 3 4 3   min 10
-
-    };
-    for(int row = 0; row < nRows; row++)
-    {
-        for(int col = 0; col < nCols; col++)
-        {
-            cost[row][col] = test[row][col];
-        }
-    }
-    
-   
-    Run();
-
-}
 
 // float 
 
